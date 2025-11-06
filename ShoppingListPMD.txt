@@ -1,0 +1,103 @@
+Smart Shopping List - Product Requirements Document
+1. Cel projektu
+Celem aplikacji jest umożliwienie użytkownikom zarządzania listą zakupów w sposób intuicyjny i inteligentny dzięki wykorzystaniu AI. Aplikacja ma wspierać codzienne planowanie zakupów, sugerować produkty na podstawie historii, optymalizować listę oraz przewidywać przyszłe potrzeby.
+
+2. Zakres funkcjonalności
+Obowiązkowe funkcje
+Mechanizm kontroli dostępu:
+
+Ekran logowania.
+Opcja rejestracji nowych użytkowników.
+Autoryzacja przez e-mail/hasło (opcjonalnie: integracja z Google/Facebook).
+Zarządzanie danymi (CRUD):
+
+Tworzenie: Dodawanie produktów do listy zakupów (nazwa, kategoria, ilość, opcjonalnie: cena).
+Odczytywanie: Wyświetlanie listy zakupów w formie tabeli lub grupowanie według kategorii.
+Aktualizacja: Edytowanie produktów (np. zmiana ilości, kategorii, ceny).
+Usuwanie: Usuwanie produktów z listy.
+Logika biznesowa z AI:
+
+Sugestie produktów: AI analizuje historię zakupów i proponuje produkty (np. "Dodaj jajka, ponieważ ostatnio kupiłeś je tydzień temu").
+Optymalizacja listy: Grupowanie produktów według kategorii (np. warzywa, nabiał) lub sugerowanie tańszych opcji.
+Przewidywanie braków: Na podstawie wprowadzonej listy zakupów aplikacja może przewidzieć, co może być potrzebne w przyszłości.
+Dokumentacja:
+
+PRD (Product Requirements Document).
+Specyfikacje techniczne (np. opis API, struktura bazy danych).
+Plan implementacji i workflow.
+Testy:
+
+Co najmniej jeden test weryfikujący działanie z perspektywy użytkownika (np. dodanie produktu do listy i jego wyświetlenie).
+Pipeline CI/CD:
+
+Automatyczne budowanie aplikacji.
+Uruchamianie testów (np. testy CRUD i logowania).
+Opcjonalne funkcje
+Publiczny URL:
+
+Aplikacja dostępna jako strona webowa (np. hostowana na Vercel/Netlify).
+Instalowalny pakiet:
+
+Wersja desktopowa (np. za pomocą Electron) lub mobilna (np. Flutter).
+Integracja z AppStore:
+
+Jeśli aplikacja będzie mobilna, zgłoszenie do AppStore lub Google Play.
+3. Technologie
+Frontend: React, Vue.js lub dowolny framework webowy.
+Backend: Node.js (Express), Python (Flask/Django), lub dowolny backend.
+Baza danych: PostgreSQL, MongoDB, SQLite.
+AI: OpenAI API, Hugging Face Transformers lub prostsze modele (np. TensorFlow.js).
+CI/CD: GitHub Actions, GitLab CI/CD, CircleCI.
+4. Architektura
+Frontend
+UI umożliwiające:
+Logowanie i rejestrację.
+Zarządzanie listą zakupów (CRUD).
+Wyświetlanie sugestii AI.
+Backend
+API REST z następującymi endpointami:
+/auth/login – logowanie użytkownika.
+/auth/register – rejestracja użytkownika.
+/shopping-list – CRUD dla listy zakupów.
+/ai/suggestions – generowanie sugestii przez AI.
+Baza danych
+Tabela users:
+ID użytkownika.
+Email.
+Hasło (hashowane).
+Tabela shopping_list:
+ID produktu.
+Nazwa produktu.
+Kategoria.
+Ilość.
+Cena.
+ID użytkownika (relacja z tabelą users).
+5. Plan implementacji
+Etap 1: Przygotowanie środowiska
+Wybór technologii (frontend, backend, baza danych).
+Konfiguracja repozytorium (publiczne lub prywatne).
+Etap 2: Implementacja podstawowych funkcji
+Mechanizm logowania/rejestracji.
+CRUD dla listy zakupów.
+Pipeline CI/CD.
+Etap 3: Dodanie logiki biznesowej z AI
+Integracja z API AI (np. OpenAI).
+Implementacja sugestii produktów i optymalizacji listy.
+Etap 4: Testowanie
+Testy jednostkowe i integracyjne.
+Test weryfikujący działanie z perspektywy użytkownika.
+Etap 5: Rozbudowa o opcjonalne funkcje
+Publiczny URL.
+Wersja mobilna lub desktopowa.
+6. Kryteria sukcesu
+Spełnienie wszystkich wymagań obowiązkowych.
+Zgłoszenie projektu w pierwszym terminie (16.11.2025) z opcjonalnymi funkcjami.
+Projekt wyróżniony na demo day.
+7. Ryzyka i ograniczenia
+Możliwe opóźnienia w implementacji AI (konfiguracja API).
+Problemy z konfiguracją CI/CD (np. błędy w pipeline).
+Ograniczony czas na testowanie.
+8. Załączniki
+Diagram architektury (frontend, backend, baza danych).
+Specyfikacja API (endpointy, przykładowe payloady).
+Przykładowe testy.

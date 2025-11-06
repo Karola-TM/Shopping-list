@@ -1,0 +1,24 @@
+Suggested progression (MVP → AI enhancements)
+
+MVP
+Create/Read/Update/Delete (CRUD) shopping list items.
+Persist locally (browser localStorage / SQLite) and optionally sync to a simple backend.
+Basic UI: add item, mark bought, delete, clear list.
+
+
+Phase 1 — small AI improvements
+Natural-language entry: let users type “two cartons of milk and eggs” and parse into items/quantities.
+Smart autocomplete / suggestions from past lists.
+Auto-categorize items (dairy, produce, household).
+Example benefit: faster entry, fewer taps.
+
+Phase 2 — richer AI features
+Recipe-to-shopping-list: paste a recipe, extract ingredients & amounts.
+Personalization: recommend frequently-bought items or recipes based on history.
+Voice input (speech-to-text + natural-language parsing).
+Receipt OCR to add items from a photo (advanced).
+
+Phase 3 — integrations & advanced
+Price comparison across stores, real-time coupons.
+Pantry tracking + expiration reminders.
+Offline-first sync and conflict resolution.
