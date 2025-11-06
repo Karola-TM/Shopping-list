@@ -4,6 +4,7 @@ const bodyParser = require('body-parser');
 const sqlite3 = require('sqlite3').verbose();
 const path = require('path');
 const fs = require('fs');
+const { generateSuggestions } = require('./ai/suggestions');
 
 const app = express();
 const PORT = process.env.PORT || 3001;
@@ -26,8 +27,14 @@ db.serialize(() => {
     quantity INTEGER DEFAULT 1,
     price REAL,
     bought INTEGER DEFAULT 0,
+    bought_date DATETIME,
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP
   )`);
+  
+  // Add bought_date column if it doesn't exist (migration)
+  db.run(`ALTER TABLE items ADD COLUMN bought_date DATETIME`, (err) => {
+    // Ignore error if column already exists
+  });
 });
 
 // Routes
@@ -95,9 +102,12 @@ app.put('/api/items/:id', (req, res) => {
   const id = req.params.id;
   const { name, category, quantity, price, bought } = req.body;
 
+  // Set bought_date when marking as bought
+  const boughtDate = bought === 1 ? new Date().toISOString() : null;
+
   db.run(
-    'UPDATE items SET name = ?, category = ?, quantity = ?, price = ?, bought = ? WHERE id = ?',
-    [name, category, quantity, price, bought !== undefined ? bought : 0, id],
+    'UPDATE items SET name = ?, category = ?, quantity = ?, price = ?, bought = ?, bought_date = ? WHERE id = ?',
+    [name, category, quantity, price, bought !== undefined ? bought : 0, boughtDate, id],
     function(err) {
       if (err) {
         res.status(500).json({ error: err.message });
@@ -143,6 +153,38 @@ app.delete('/api/items', (req, res) => {
     }
     res.json({ message: 'All items deleted successfully', count: this.changes });
   });
+});
+
+// AI Suggestions endpoint
+app.post('/api/ai/suggestions', (req, res) => {
+  const { currentItems = [] } = req.body;
+  
+  // Pobierz historię zakupów (produkty oznaczone jako kupione)
+  // Uwzględnij ostatnie 60 dni historii
+  const daysAgo = new Date();
+  daysAgo.setDate(daysAgo.getDate() - 60);
+  
+  db.all(
+    `SELECT * FROM items 
+     WHERE bought = 1 AND bought_date IS NOT NULL 
+     AND bought_date >= datetime('now', '-60 days')
+     ORDER BY bought_date DESC`,
+    [],
+    (err, history) => {
+      if (err) {
+        res.status(500).json({ error: err.message });
+        return;
+      }
+      
+      try {
+        const suggestions = generateSuggestions(history, currentItems);
+        res.json(suggestions);
+      } catch (error) {
+        console.error('Error generating suggestions:', error);
+        res.status(500).json({ error: 'Failed to generate suggestions' });
+      }
+    }
+  );
 });
 
 // Health check

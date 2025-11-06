@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import './App.css';
 import ShoppingList from './components/ShoppingList';
 import AddItemForm from './components/AddItemForm';
+import AISuggestions from './components/AISuggestions';
 import { getItems, createItem, updateItem, deleteItem, clearAllItems } from './services/api';
 import { loadFromLocalStorage, saveToLocalStorage } from './services/localStorage';
 
@@ -143,6 +144,13 @@ function App() {
         </header>
 
         <AddItemForm onAdd={handleAddItem} />
+
+        {!loading && (
+          <AISuggestions 
+            currentItems={items.filter(item => item.bought === 0)} 
+            onAddSuggestion={handleAddItem}
+          />
+        )}
 
         {loading ? (
           <div className="loading">Ładowanie...</div>

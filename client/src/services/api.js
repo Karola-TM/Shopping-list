@@ -39,5 +39,16 @@ export const clearAllItems = async () => {
   return response.data;
 };
 
+export const getAISuggestions = async (currentItems) => {
+  try {
+    const response = await api.post('/ai/suggestions', { currentItems });
+    return response.data;
+  } catch (error) {
+    // Jeśli backend nie jest dostępny, zwróć pustą listę
+    console.error('Error fetching AI suggestions:', error);
+    return { suggestions: [], regular: [], overdue: [], category: [], complementary: [] };
+  }
+};
+
 export default api;
 

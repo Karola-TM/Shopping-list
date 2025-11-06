@@ -11,6 +11,12 @@ Aplikacja webowa do zarządzania listą zakupów zgodna z wymaganiami MVP.
   - Oznaczanie jako kupione
   - Usuwanie produktów
   - Czyszczenie całej listy
+- ✅ **AI Sugestie Produktów** 🤖:
+  - Analiza historii zakupów (ostatnie 60 dni)
+  - Sugestie produktów regularnych (kupowanych często)
+  - Przypomnienia o produktach niekupionych od dłuższego czasu
+  - Sugestie produktów z tej samej kategorii
+  - Produkty często kupowane razem (komplementarne)
 
 ## Technologie
 
@@ -202,6 +208,7 @@ Shopping-list/
 - `PUT /api/items/:id` - Zaktualizuj produkt
 - `DELETE /api/items/:id` - Usuń produkt
 - `DELETE /api/items` - Usuń wszystkie produkty
+- `POST /api/ai/suggestions` - Pobierz sugestie AI produktów
 - `GET /api/health` - Status serwera
 
 ## Funkcje
@@ -217,6 +224,14 @@ Shopping-list/
 - Usuwanie pojedynczych produktów
 - Czyszczenie całej listy
 - Automatyczne grupowanie: "Do kupienia" i "Kupione"
+
+### AI Sugestie Produktów
+- **Automatyczna analiza**: System analizuje historię zakupów i uczy się z Twoich wzorców
+- **Sugestie regularne**: Produkty kupowane często (>3 razy w miesiącu)
+- **Przypomnienia**: Produkty niekupione od >7 dni (jeśli były regularne)
+- **Kategorie**: Gdy dodajesz produkt z kategorii, sugeruje inne popularne produkty z tej kategorii
+- **Komplementarne**: Produkty często kupowane razem z produktami na Twojej liście
+- **Działanie offline**: Wszystkie analizy wykonywane lokalnie, bez wysyłania danych na zewnątrz
 
 ### Przechowywanie danych
 - Backend używa SQLite do trwałego przechowywania
