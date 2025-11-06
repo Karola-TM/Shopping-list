@@ -14,6 +14,27 @@ export const CATEGORIES = [
   'Inne'
 ];
 
+// Mapowanie kategorii do odpowiednich emoji
+export const CATEGORY_EMOJIS = {
+  'Nabiał': '🥛',
+  'Warzywa': '🥬',
+  'Owoce': '🍎',
+  'Mięso i wędliny': '🥩',
+  'Pieczywo': '🍞',
+  'Napoje': '🥤',
+  'Słodycze': '🍫',
+  'Przyprawy': '🌶️',
+  'Chemia gospodarcza': '🧴',
+  'Kosmetyki': '💄',
+  'Środki czystości': '🧹',
+  'Inne': '📦'
+};
+
+// Funkcja pomocnicza do pobierania emoji dla kategorii
+export const getCategoryEmoji = (category) => {
+  return CATEGORY_EMOJIS[category] || CATEGORY_EMOJIS['Inne'];
+};
+
 // Funkcja pomocnicza do grupowania produktów według kategorii
 export const groupItemsByCategory = (items) => {
   const grouped = {};

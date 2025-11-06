@@ -110,6 +110,28 @@ function App() {
     }
   };
 
+  const handleEditItem = async (id, updatedData) => {
+    const item = items.find(i => i.id === id);
+    if (!item) return;
+
+    const updatedItem = { ...item, ...updatedData };
+
+    try {
+      if (useBackend) {
+        const savedItem = await updateItem(id, updatedItem);
+        setItems(items.map(i => i.id === id ? savedItem : i));
+        saveToLocalStorage(items.map(i => i.id === id ? savedItem : i));
+      } else {
+        const updatedItems = items.map(i => i.id === id ? updatedItem : i);
+        setItems(updatedItems);
+        saveToLocalStorage(updatedItems);
+      }
+    } catch (err) {
+      console.error('Error editing item:', err);
+      setError('Failed to edit item');
+    }
+  };
+
   const handleClearList = async () => {
     if (!window.confirm('Czy na pewno chcesz usunąć wszystkie produkty?')) {
       return;
@@ -159,6 +181,7 @@ function App() {
             items={items}
             onToggleBought={handleToggleBought}
             onDelete={handleDeleteItem}
+            onEdit={handleEditItem}
             onClear={handleClearList}
           />
         )}

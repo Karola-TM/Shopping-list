@@ -1,9 +1,9 @@
 import React from 'react';
 import './ShoppingList.css';
 import ShoppingItem from './ShoppingItem';
-import { groupItemsByCategory } from '../utils/categories';
+import { groupItemsByCategory, getCategoryEmoji } from '../utils/categories';
 
-const ShoppingList = ({ items, onToggleBought, onDelete, onClear }) => {
+const ShoppingList = ({ items, onToggleBought, onDelete, onEdit, onClear }) => {
   const boughtItems = items.filter(item => item.bought === 1);
   const activeItems = items.filter(item => item.bought === 0);
   
@@ -39,7 +39,10 @@ const ShoppingList = ({ items, onToggleBought, onDelete, onClear }) => {
           <h3 className="section-title">Do kupienia</h3>
           {groupedActiveItems.map(({ category, items: categoryItems }) => (
             <div key={category} className="category-group">
-              <h4 className="category-title">{category}</h4>
+              <h4 className="category-title">
+                <span className="category-emoji">{getCategoryEmoji(category)}</span>
+                {category}
+              </h4>
               <div className="items-list">
                 {categoryItems.map(item => (
                   <ShoppingItem
@@ -47,6 +50,7 @@ const ShoppingList = ({ items, onToggleBought, onDelete, onClear }) => {
                     item={item}
                     onToggleBought={onToggleBought}
                     onDelete={onDelete}
+                    onEdit={onEdit}
                   />
                 ))}
               </div>
@@ -60,7 +64,10 @@ const ShoppingList = ({ items, onToggleBought, onDelete, onClear }) => {
           <h3 className="section-title">Kupione</h3>
           {groupedBoughtItems.map(({ category, items: categoryItems }) => (
             <div key={category} className="category-group">
-              <h4 className="category-title">{category}</h4>
+              <h4 className="category-title">
+                <span className="category-emoji">{getCategoryEmoji(category)}</span>
+                {category}
+              </h4>
               <div className="items-list bought">
                 {categoryItems.map(item => (
                   <ShoppingItem
@@ -68,6 +75,7 @@ const ShoppingList = ({ items, onToggleBought, onDelete, onClear }) => {
                     item={item}
                     onToggleBought={onToggleBought}
                     onDelete={onDelete}
+                    onEdit={onEdit}
                   />
                 ))}
               </div>

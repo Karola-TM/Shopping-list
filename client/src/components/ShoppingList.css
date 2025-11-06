@@ -64,9 +64,9 @@
   gap: 8px;
 }
 
-.category-title::before {
-  content: '📦';
-  font-size: 0.9em;
+.category-emoji {
+  font-size: 1.2em;
+  display: inline-block;
 }
 
 .items-list {
