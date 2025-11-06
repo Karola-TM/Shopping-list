@@ -38,10 +38,35 @@
 .section-title {
   color: #666;
   font-size: 1.1em;
-  margin-bottom: 15px;
+  margin-bottom: 20px;
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.5px;
+}
+
+.category-group {
+  margin-bottom: 25px;
+}
+
+.category-group:last-child {
+  margin-bottom: 0;
+}
+
+.category-title {
+  color: #667eea;
+  font-size: 1em;
+  margin-bottom: 12px;
+  font-weight: 600;
+  padding-bottom: 8px;
+  border-bottom: 2px solid #e8e8f0;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.category-title::before {
+  content: '📦';
+  font-size: 0.9em;
 }
 
 .items-list {

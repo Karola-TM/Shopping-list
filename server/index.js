@@ -68,9 +68,12 @@ app.post('/api/items', (req, res) => {
     return;
   }
 
+  // Ustaw domyślną kategorię "Inne" jeśli nie podano
+  const itemCategory = category && category.trim() ? category.trim() : 'Inne';
+
   db.run(
     'INSERT INTO items (name, category, quantity, price) VALUES (?, ?, ?, ?)',
-    [name.trim(), category || null, quantity || 1, price || null],
+    [name.trim(), itemCategory, quantity || 1, price || null],
     function(err) {
       if (err) {
         res.status(500).json({ error: err.message });

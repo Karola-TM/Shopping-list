@@ -1,9 +1,10 @@
 import React, { useState } from 'react';
 import './AddItemForm.css';
+import { CATEGORIES } from '../utils/categories';
 
 const AddItemForm = ({ onAdd }) => {
   const [name, setName] = useState('');
-  const [category, setCategory] = useState('');
+  const [category, setCategory] = useState('Inne');
   const [quantity, setQuantity] = useState(1);
   const [price, setPrice] = useState('');
 
@@ -17,14 +18,14 @@ const AddItemForm = ({ onAdd }) => {
 
     onAdd({
       name: name.trim(),
-      category: category.trim() || null,
+      category: category || 'Inne',
       quantity: parseInt(quantity) || 1,
       price: price ? parseFloat(price) : null
     });
 
     // Reset form
     setName('');
-    setCategory('');
+    setCategory('Inne');
     setQuantity(1);
     setPrice('');
   };
@@ -46,13 +47,17 @@ const AddItemForm = ({ onAdd }) => {
 
         <div className="form-group">
           <label htmlFor="category">Kategoria</label>
-          <input
-            type="text"
+          <select
             id="category"
             value={category}
             onChange={(e) => setCategory(e.target.value)}
-            placeholder="np. Nabiał"
-          />
+          >
+            {CATEGORIES.map(cat => (
+              <option key={cat} value={cat}>
+                {cat}
+              </option>
+            ))}
+          </select>
         </div>
       </div>
 
