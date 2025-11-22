@@ -9,6 +9,33 @@ const api = axios.create({
   },
 });
 
+// Add token to requests if available
+api.interceptors.request.use(
+  (config) => {
+    const token = localStorage.getItem('token');
+    if (token) {
+      config.headers.Authorization = `Bearer ${token}`;
+    }
+    return config;
+  },
+  (error) => {
+    return Promise.reject(error);
+  }
+);
+
+// Handle 401 errors (unauthorized)
+api.interceptors.response.use(
+  (response) => response,
+  (error) => {
+    if (error.response?.status === 401 || error.response?.status === 403) {
+      // Token expired or invalid
+      localStorage.removeItem('token');
+      window.location.href = '/';
+    }
+    return Promise.reject(error);
+  }
+);
+
 export const getItems = async () => {
   const response = await api.get('/items');
   return response.data;
@@ -48,6 +75,22 @@ export const getAISuggestions = async (currentItems) => {
     console.error('Error fetching AI suggestions:', error);
     return { suggestions: [], regular: [], overdue: [], category: [], complementary: [] };
   }
+};
+
+// Authentication endpoints
+export const loginUser = async (credentials) => {
+  const response = await api.post('/auth/login', credentials);
+  return response.data;
+};
+
+export const registerUser = async (userData) => {
+  const response = await api.post('/auth/register', userData);
+  return response.data;
+};
+
+export const verifyToken = async () => {
+  const response = await api.get('/auth/verify');
+  return response.data;
 };
 
 export default api;

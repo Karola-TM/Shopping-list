@@ -5,6 +5,7 @@ Aplikacja webowa do zarządzania listą zakupów zgodna z wymaganiami MVP.
 ## Funkcjonalności MVP
 
 - ✅ **CRUD operacje** - Tworzenie, odczytywanie, aktualizacja i usuwanie produktów
+- ✅ **Autoryzacja użytkowników** - Rejestracja, logowanie i zarządzanie sesją
 - ✅ **Lokalne przechowywanie** - SQLite w backendzie + localStorage jako fallback
 - ✅ **Podstawowy UI**:
   - Dodawanie produktów (nazwa, kategoria, ilość, cena)
@@ -78,7 +79,23 @@ cd server && npm install && cd ..
 cd client && npm install && cd ..
 ```
 
-### Krok 3: Uruchom aplikację
+### Krok 3: Utwórz konto testowe (opcjonalne)
+
+Możesz utworzyć konto testowe, które będzie gotowe do użycia:
+
+```bash
+cd server
+npm run seed
+```
+
+To utworzy konto testowe z następującymi danymi:
+- **Username**: `test`
+- **Email**: `test@example.com`
+- **Password**: `test123`
+
+**Uwaga**: Jeśli konto już istnieje, skrypt poinformuje Cię o tym i nie utworzy duplikatu.
+
+### Krok 4: Uruchom aplikację
 
 ```bash
 npm run dev
@@ -94,7 +111,13 @@ Aplikacja automatycznie otworzy się w przeglądarce. Jeśli nie, otwórz ręczn
 http://localhost:3000
 ```
 
-### Krok 4: Użyj aplikacji
+### Krok 5: Zaloguj się lub zarejestruj
+
+1. **Jeśli masz konto testowe**: Użyj danych z kroku 3
+2. **Jeśli chcesz utworzyć nowe konto**: Kliknij "Zarejestruj się" i wypełnij formularz
+3. Po zalogowaniu będziesz mógł korzystać z aplikacji
+
+### Krok 6: Użyj aplikacji
 
 1. Dodaj produkty do listy zakupów używając formularza
 2. Oznacz produkty jako kupione klikając checkbox
@@ -200,16 +223,104 @@ Shopping-list/
 └── package.json          # Root package.json
 ```
 
+## Autoryzacja
+
+Aplikacja używa systemu autoryzacji opartego na JWT (JSON Web Tokens). Wszystkie operacje na produktach wymagają zalogowania.
+
+### Rejestracja użytkownika
+
+Aby utworzyć nowe konto:
+1. Kliknij "Zarejestruj się" na ekranie logowania
+2. Wypełnij formularz:
+   - **Nazwa użytkownika** (wymagane, unikalne)
+   - **Email** (wymagane, unikalne)
+   - **Hasło** (wymagane, minimum 6 znaków)
+   - **Potwierdź hasło** (wymagane)
+3. Po rejestracji automatycznie zostaniesz zalogowany
+
+### Logowanie
+
+Aby zalogować się do istniejącego konta:
+1. Wprowadź nazwę użytkownika lub email
+2. Wprowadź hasło
+3. Kliknij "Zaloguj się"
+
+### Konto testowe
+
+Dla szybkiego testowania aplikacji możesz użyć konta testowego:
+
+**Dane logowania:**
+- **Username**: `test`
+- **Email**: `test@example.com`
+- **Password**: `test123`
+
+Aby utworzyć konto testowe, uruchom:
+```bash
+cd server
+npm run seed
+```
+
+### Bezpieczeństwo
+
+- Hasła są hashowane przy użyciu bcrypt (10 rund)
+- Tokeny JWT są ważne przez 7 dni
+- Każdy użytkownik widzi tylko swoje produkty
+- Token jest automatycznie dodawany do wszystkich żądań API
+- Przy wygaśnięciu tokenu użytkownik jest automatycznie wylogowywany
+
+### Wylogowanie
+
+Kliknij przycisk "Wyloguj" w prawym górnym rogu aplikacji, aby zakończyć sesję.
+
 ## API Endpoints
 
-- `GET /api/items` - Pobierz wszystkie produkty
-- `GET /api/items/:id` - Pobierz pojedynczy produkt
+### Endpointy autoryzacji (publiczne)
+
+- `POST /api/auth/register` - Rejestracja nowego użytkownika
+  ```json
+  {
+    "username": "string",
+    "email": "string",
+    "password": "string"
+  }
+  ```
+- `POST /api/auth/login` - Logowanie użytkownika
+  ```json
+  {
+    "username": "string (username lub email)",
+    "password": "string"
+  }
+  ```
+- `GET /api/auth/verify` - Weryfikacja tokenu (wymaga autoryzacji)
+
+### Endpointy produktów (wymagają autoryzacji)
+
+Wszystkie endpointy produktów wymagają nagłówka `Authorization: Bearer <token>`.
+
+- `GET /api/items` - Pobierz wszystkie produkty użytkownika
+- `GET /api/items/:id` - Pobierz pojedynczy produkt użytkownika
 - `POST /api/items` - Dodaj nowy produkt
+  ```json
+  {
+    "name": "string (wymagane)",
+    "category": "string (opcjonalne)",
+    "quantity": "number (opcjonalne, domyślnie 1)",
+    "price": "number (opcjonalne)"
+  }
+  ```
 - `PUT /api/items/:id` - Zaktualizuj produkt
 - `DELETE /api/items/:id` - Usuń produkt
-- `DELETE /api/items` - Usuń wszystkie produkty
+- `DELETE /api/items` - Usuń wszystkie produkty użytkownika
 - `POST /api/ai/suggestions` - Pobierz sugestie AI produktów
-- `GET /api/health` - Status serwera
+  ```json
+  {
+    "currentItems": "array (opcjonalne)"
+  }
+  ```
+
+### Inne endpointy
+
+- `GET /api/health` - Status serwera (publiczny)
 
 ## Funkcje
 
@@ -235,8 +346,10 @@ Shopping-list/
 
 ### Przechowywanie danych
 - Backend używa SQLite do trwałego przechowywania
+- Każdy użytkownik ma własną listę produktów (izolacja danych)
 - Frontend automatycznie synchronizuje z localStorage jako backup
 - Jeśli backend jest niedostępny, aplikacja działa w trybie offline z localStorage
+- Tokeny JWT są przechowywane w localStorage przeglądarki
 
 ## Rozwój
 
