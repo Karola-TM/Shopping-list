@@ -339,9 +339,34 @@ app.get('/api/health', (req, res) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString() });
 });
 
+// Serve static files from React app in production
+if (process.env.NODE_ENV === 'production') {
+  const clientBuildPath = path.join(__dirname, '../client/build');
+  
+  // Check if build directory exists
+  if (fs.existsSync(clientBuildPath)) {
+    // Serve static files
+    app.use(express.static(clientBuildPath));
+    
+    // Serve React app for all non-API routes
+    app.get('*', (req, res) => {
+      // Don't serve React app for API routes
+      if (req.path.startsWith('/api')) {
+        return res.status(404).json({ error: 'API endpoint not found' });
+      }
+      res.sendFile(path.join(clientBuildPath, 'index.html'));
+    });
+  } else {
+    console.warn('Warning: Client build directory not found. Frontend will not be served.');
+  }
+}
+
 // Start server
 app.listen(PORT, () => {
   console.log(`Server running on http://localhost:${PORT}`);
+  if (process.env.NODE_ENV === 'production') {
+    console.log('Production mode: Serving React app from /client/build');
+  }
 });
 
 // Graceful shutdown
