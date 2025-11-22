@@ -148,6 +148,7 @@ function getCategorySuggestions(history, currentItems) {
 function generateSuggestions(history, currentItems) {
   if (!history || history.length === 0) {
     return {
+      suggestions: [],
       regular: [],
       overdue: [],
       category: [],

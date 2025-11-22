@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import './AISuggestions.css';
 import { getAISuggestions } from '../services/api';
 
@@ -8,11 +8,7 @@ const AISuggestions = ({ currentItems, onAddSuggestion }) => {
   const [expanded, setExpanded] = useState(true);
   const [error, setError] = useState(null);
 
-  useEffect(() => {
-    loadSuggestions();
-  }, [currentItems]);
-
-  const loadSuggestions = async () => {
+  const loadSuggestions = useCallback(async () => {
     setLoading(true);
     setError(null);
     
@@ -26,7 +22,11 @@ const AISuggestions = ({ currentItems, onAddSuggestion }) => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [currentItems]);
+
+  useEffect(() => {
+    loadSuggestions();
+  }, [loadSuggestions]);
 
   const handleAddSuggestion = (suggestion) => {
     const itemData = {

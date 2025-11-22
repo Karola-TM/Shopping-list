@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import './App.css';
 import ShoppingList from './components/ShoppingList';
 import AddItemForm from './components/AddItemForm';
@@ -17,17 +17,7 @@ function App() {
   const [useBackend, setUseBackend] = useState(true);
   const [showRegister, setShowRegister] = useState(false);
 
-  // Load items on mount and when user changes
-  useEffect(() => {
-    if (isAuthenticated) {
-      loadItems();
-    } else {
-      setItems([]);
-      setLoading(false);
-    }
-  }, [isAuthenticated]);
-
-  const loadItems = async () => {
+  const loadItems = useCallback(async () => {
     setLoading(true);
     setError(null);
     
@@ -52,7 +42,17 @@ function App() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [useBackend]);
+
+  // Load items on mount and when user changes
+  useEffect(() => {
+    if (isAuthenticated) {
+      loadItems();
+    } else {
+      setItems([]);
+      setLoading(false);
+    }
+  }, [isAuthenticated, loadItems]);
 
   const handleAddItem = async (itemData) => {
     try {

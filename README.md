@@ -274,6 +274,28 @@ npm run seed
 
 Kliknij przycisk "Wyloguj" w prawym górnym rogu aplikacji, aby zakończyć sesję.
 
+## Dokumentacja API
+
+API jest udokumentowane przy użyciu OpenAPI/Swagger. Interaktywna dokumentacja jest dostępna pod adresem:
+
+**http://localhost:3001/api-docs**
+
+Dokumentacja zawiera:
+- Opis wszystkich endpointów
+- Schematy żądań i odpowiedzi
+- Przykłady użycia
+- Możliwość testowania endpointów bezpośrednio z przeglądarki
+
+### Uwaga dotycząca autoryzacji w Swagger UI
+
+Aby przetestować chronione endpointy w Swagger UI:
+1. Najpierw zarejestruj się lub zaloguj używając endpointów `/api/auth/register` lub `/api/auth/login`
+2. Skopiuj otrzymany token JWT
+3. Kliknij przycisk "Authorize" w prawym górnym rogu Swagger UI
+4. Wprowadź token w formacie: `Bearer <twój_token>`
+5. Kliknij "Authorize" i zamknij okno dialogowe
+6. Teraz możesz testować wszystkie chronione endpointy
+
 ## API Endpoints
 
 ### Endpointy autoryzacji (publiczne)
