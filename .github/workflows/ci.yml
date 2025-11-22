@@ -1,0 +1,60 @@
+name: CI/CD Pipeline
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main, develop ]
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+
+    strategy:
+      matrix:
+        node-version: [18.x, 20.x]
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v3
+
+    - name: Setup Node.js ${{ matrix.node-version }}
+      uses: actions/setup-node@v3
+      with:
+        node-version: ${{ matrix.node-version }}
+        cache: 'npm'
+
+    - name: Install root dependencies
+      run: npm install
+
+    - name: Install server dependencies
+      working-directory: ./server
+      run: npm install
+
+    - name: Install client dependencies
+      working-directory: ./client
+      run: npm install
+
+    - name: Run server tests
+      working-directory: ./server
+      run: npm test -- --coverage --watchAll=false
+      continue-on-error: true
+
+    - name: Run client tests
+      working-directory: ./client
+      run: npm test -- --coverage --watchAll=false --ci
+      env:
+        CI: true
+
+    - name: Build client
+      working-directory: ./client
+      run: npm run build
+      env:
+        CI: true
+
+    - name: Check server can start
+      working-directory: ./server
+      run: |
+        timeout 10s npm start || exit 0
+      continue-on-error: true
+

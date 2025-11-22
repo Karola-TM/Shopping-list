@@ -18,6 +18,8 @@ Aplikacja webowa do zarządzania listą zakupów zgodna z wymaganiami MVP.
   - Przypomnienia o produktach niekupionych od dłuższego czasu
   - Sugestie produktów z tej samej kategorii
   - Produkty często kupowane razem (komplementarne)
+- ✅ **Testy** - Testy E2E i jednostkowe weryfikujące działanie aplikacji
+- ✅ **CI/CD Pipeline** - Automatyczne budowanie i testowanie przy każdym push
 
 ## Technologie
 
@@ -370,6 +372,46 @@ npm start
 cd client
 npm run build
 ```
+
+### Testy
+
+Projekt zawiera testy weryfikujące działanie aplikacji z perspektywy użytkownika oraz testy jednostkowe dla logiki biznesowej.
+
+#### Uruchomienie testów frontendu
+```bash
+cd client
+npm test
+```
+
+#### Uruchomienie testów backendu
+```bash
+cd server
+npm test
+```
+
+#### Testy E2E (End-to-End)
+Testy weryfikują następujące scenariusze użytkownika:
+- Logowanie użytkownika
+- Dodawanie produktu do listy i wyświetlenie go
+- Oznaczanie produktu jako kupiony
+- Usuwanie produktu z listy
+
+#### Testy jednostkowe
+- Testy modułu AI (analiza historii zakupów, sugestie produktów)
+- Testy funkcji pomocniczych
+
+## CI/CD
+
+Projekt zawiera skonfigurowany pipeline CI/CD używający GitHub Actions (`.github/workflows/ci.yml`).
+
+Pipeline automatycznie:
+- Buduje aplikację frontendową i backendową
+- Uruchamia testy jednostkowe i E2E
+- Weryfikuje działanie na różnych wersjach Node.js (18.x, 20.x)
+
+Pipeline uruchamia się automatycznie przy:
+- Push do brancha `main` lub `develop`
+- Utworzeniu Pull Request do `main` lub `develop`
 
 ## Następne kroki (zgodnie z ProgressionPhases.txt)
 
