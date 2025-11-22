@@ -63,6 +63,34 @@ db.serialize(() => {
   db.run(`ALTER TABLE items ADD COLUMN bought_date DATETIME`, (err) => {
     // Ignore error if column already exists
   });
+
+  // Create test user if it doesn't exist
+  db.get('SELECT * FROM users WHERE username = ? OR email = ?', ['test', 'test@example.com'], async (err, row) => {
+    if (err) {
+      console.error('Error checking for test user:', err);
+      return;
+    }
+    if (!row) {
+      try {
+        const hashedPassword = await bcrypt.hash('test123', 10);
+        db.run(
+          'INSERT INTO users (username, email, password) VALUES (?, ?, ?)',
+          ['test', 'test@example.com', hashedPassword],
+          function(err) {
+            if (err) {
+              console.error('Error creating test user:', err);
+            } else {
+              console.log('✅ Test user created: test / test123');
+            }
+          }
+        );
+      } catch (error) {
+        console.error('Error hashing password for test user:', error);
+      }
+    } else {
+      console.log('✅ Test user already exists: test / test123');
+    }
+  });
 });
 
 // Authentication middleware
@@ -219,15 +247,18 @@ app.post('/api/auth/login', (req, res) => {
 
   db.get('SELECT * FROM users WHERE username = ? OR email = ?', [username, username], async (err, user) => {
     if (err) {
+      console.error('Database error during login:', err);
       return res.status(500).json({ error: err.message });
     }
     if (!user) {
+      console.log(`Login attempt failed: user not found for username/email: ${username}`);
       return res.status(401).json({ error: 'Invalid username or password' });
     }
 
     try {
       const validPassword = await bcrypt.compare(password, user.password);
       if (!validPassword) {
+        console.log(`Login attempt failed: invalid password for user: ${user.username}`);
         return res.status(401).json({ error: 'Invalid username or password' });
       }
 
@@ -238,12 +269,14 @@ app.post('/api/auth/login', (req, res) => {
         { expiresIn: '7d' }
       );
 
+      console.log(`Login successful for user: ${user.username}`);
       res.json({
         message: 'Login successful',
         token,
         user: { id: user.id, username: user.username, email: user.email }
       });
     } catch (error) {
+      console.error('Error during login:', error);
       res.status(500).json({ error: 'Server error during login' });
     }
   });

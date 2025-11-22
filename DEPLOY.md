@@ -55,11 +55,42 @@ Wypełnij następujące pola:
 
 ### Zmienne środowiskowe (Environment Variables)
 
-Kliknij "Advanced" i dodaj następujące zmienne:
+**WAŻNE:** Zmienne środowiskowe możesz ustawić na dwa sposoby:
 
-- `NODE_ENV` = `production`
-- `JWT_SECRET` = (kliknij "Generate" aby wygenerować losowy klucz)
-- `PORT` = (Render ustawi to automatycznie, nie trzeba dodawać)
+#### Sposób 1: Podczas tworzenia serwisu (przed kliknięciem "Create")
+1. Przewiń w dół formularza do sekcji "Environment Variables"
+2. Kliknij "Add Environment Variable"
+3. Dodaj zmienne:
+   - **Key**: `NODE_ENV`, **Value**: `production`
+   - **Key**: `JWT_SECRET`, **Value**: (wygeneruj losowy klucz - patrz poniżej)
+
+#### Sposób 2: Po utworzeniu serwisu (w dashboardzie)
+1. W dashboardzie Render kliknij na nazwę swojego serwisu
+2. W lewym menu kliknij **"Environment"**
+3. W sekcji "Environment Variables" kliknij **"Add Environment Variable"**
+4. Dodaj zmienne:
+   - **Key**: `NODE_ENV`, **Value**: `production`
+   - **Key**: `JWT_SECRET`, **Value**: (wygeneruj losowy klucz)
+
+**Jak wygenerować JWT_SECRET?**
+
+Możesz użyć jednej z tych metod:
+
+**Opcja A - Generator online:**
+- Przejdź do: https://randomkeygen.com/
+- Skopiuj jeden z "CodeIgniter Encryption Keys" (64 znaki)
+
+**Opcja B - Terminal (jeśli masz OpenSSL):**
+```bash
+openssl rand -base64 32
+```
+
+**Opcja C - Node.js:**
+```bash
+node -e "console.log(require('crypto').randomBytes(32).toString('base64'))"
+```
+
+**Uwaga:** `PORT` jest ustawiane automatycznie przez Render - nie trzeba go dodawać ręcznie!
 
 ## Krok 5: Deployment
 

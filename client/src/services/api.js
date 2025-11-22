@@ -31,9 +31,15 @@ api.interceptors.response.use(
   (response) => response,
   (error) => {
     if (error.response?.status === 401 || error.response?.status === 403) {
-      // Token expired or invalid
-      localStorage.removeItem('token');
-      window.location.href = '/';
+      // Don't redirect on login/register endpoints - these return 401 for invalid credentials
+      const isAuthEndpoint = error.config?.url?.includes('/auth/login') || 
+                             error.config?.url?.includes('/auth/register');
+      
+      if (!isAuthEndpoint) {
+        // Token expired or invalid for protected endpoints
+        localStorage.removeItem('token');
+        window.location.href = '/';
+      }
     }
     return Promise.reject(error);
   }
