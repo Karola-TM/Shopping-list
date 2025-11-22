@@ -371,9 +371,14 @@ Wszystkie endpointy produktów wymagają nagłówka `Authorization: Bearer <toke
 ### Przechowywanie danych
 - Backend używa SQLite do trwałego przechowywania
 - Każdy użytkownik ma własną listę produktów (izolacja danych)
-- Frontend automatycznie synchronizuje z localStorage jako backup
+- Frontend automatycznie synchronizuje z localStorage jako backup (dane są teraz przypisane do użytkownika)
 - Jeśli backend jest niedostępny, aplikacja działa w trybie offline z localStorage
 - Tokeny JWT są przechowywane w localStorage przeglądarki
+
+**⚠️ UWAGA dotycząca deploymentu na Render:**
+- SQLite na Render Free Tier **NIE jest trwałe** - plik bazy danych jest usuwany przy każdym deploymencie
+- Konta i dane będą tracone przy każdym redeploymencie
+- Aby zachować dane między deploymentami, użyj PostgreSQL (zobacz `DEPLOY.md` dla szczegółów)
 
 ## Rozwój
 

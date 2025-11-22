@@ -134,11 +134,35 @@ Render automatycznie wykrywa zmiany w repozytorium i uruchamia nowy deployment:
 - Upewnij się, że `startCommand` jest poprawny
 - Sprawdź czy port jest ustawiony przez Render (zmienna `PORT`)
 
-### Baza danych nie działa
+### Baza danych nie działa / Dane znikają po deploymencie
 
-- SQLite działa lokalnie na serwerze Render
-- Dane są trwałe między deploymentami
-- Jeśli potrzebujesz zresetować bazę, możesz usunąć plik `shopping_list.db` i zrestartować serwis
+**⚠️ WAŻNE: SQLite na Render Free Tier NIE jest trwałe!**
+
+- SQLite działa lokalnie na serwerze Render, ale **plik bazy danych jest usuwany przy każdym deploymencie**
+- Na darmowym tierze Render filesystem jest **ephemeral** (tymczasowy)
+- **Konta i dane będą tracone przy każdym redeploymencie**
+
+**Rozwiązanie: Użyj PostgreSQL (trwała baza danych)**
+
+✅ **Kod już obsługuje PostgreSQL!** Wystarczy skonfigurować bazę danych:
+
+1. W dashboardzie Render kliknij **"New +"** → **"PostgreSQL"**
+2. Wybierz plan **"Free"** (darmowy)
+3. Skonfiguruj:
+   - **Name**: `shopping-list-db`
+   - **Database**: `shopping_list`
+   - **User**: (zostanie wygenerowany)
+4. Po utworzeniu, skopiuj **Internal Database URL** (np. `postgresql://user:pass@host:5432/shopping_list`)
+5. W swoim Web Service dodaj zmienną środowiskową:
+   - **Key**: `DATABASE_URL`
+   - **Value**: (wklej Internal Database URL)
+6. Zrestartuj serwis - aplikacja automatycznie użyje PostgreSQL zamiast SQLite
+
+**Jak to działa:**
+- Jeśli `DATABASE_URL` jest ustawione → używa PostgreSQL (trwałe dane)
+- Jeśli `DATABASE_URL` nie jest ustawione → używa SQLite (dane tracone przy deploymencie)
+
+**Alternatywnie:** Jeśli chcesz pozostać przy SQLite, po prostu nie ustawiaj `DATABASE_URL`. Pamiętaj, że dane będą resetowane przy każdym deploymencie.
 
 ### Frontend nie łączy się z backendem
 

@@ -22,27 +22,29 @@ function App() {
     setError(null);
     
     try {
-      if (useBackend) {
+      if (useBackend && user) {
         const data = await getItems();
         setItems(data);
-        // Sync to localStorage as backup
-        saveToLocalStorage(data);
-      } else {
-        // Fallback to localStorage
-        const data = loadFromLocalStorage();
+        // Sync to localStorage as backup (user-specific)
+        saveToLocalStorage(data, user.id);
+      } else if (user) {
+        // Fallback to localStorage (user-specific)
+        const data = loadFromLocalStorage(user.id);
         setItems(data);
       }
     } catch (err) {
       console.error('Error loading items:', err);
-      // Fallback to localStorage if backend fails
-      const localData = loadFromLocalStorage();
-      setItems(localData);
+      // Fallback to localStorage if backend fails (user-specific)
+      if (user) {
+        const localData = loadFromLocalStorage(user.id);
+        setItems(localData);
+      }
       setUseBackend(false);
       setError('Backend unavailable, using local storage');
     } finally {
       setLoading(false);
     }
-  }, [useBackend]);
+  }, [useBackend, user]);
 
   // Load items on mount and when user changes
   useEffect(() => {
@@ -55,15 +57,17 @@ function App() {
   }, [isAuthenticated, loadItems]);
 
   const handleAddItem = async (itemData) => {
+    if (!user) return;
+    
     try {
       if (useBackend) {
         const newItem = await createItem(itemData);
         setItems([...items, newItem]);
-        // Update localStorage
+        // Update localStorage (user-specific)
         const updatedItems = [...items, newItem];
-        saveToLocalStorage(updatedItems);
+        saveToLocalStorage(updatedItems, user.id);
       } else {
-        // Use localStorage
+        // Use localStorage (user-specific)
         const newItem = {
           id: Date.now(),
           ...itemData,
@@ -72,7 +76,7 @@ function App() {
         };
         const updatedItems = [...items, newItem];
         setItems(updatedItems);
-        saveToLocalStorage(updatedItems);
+        saveToLocalStorage(updatedItems, user.id);
       }
     } catch (err) {
       console.error('Error adding item:', err);
@@ -81,6 +85,8 @@ function App() {
   };
 
   const handleToggleBought = async (id) => {
+    if (!user) return;
+    
     const item = items.find(i => i.id === id);
     if (!item) return;
 
@@ -90,11 +96,11 @@ function App() {
       if (useBackend) {
         await updateItem(id, updatedItem);
         setItems(items.map(i => i.id === id ? updatedItem : i));
-        saveToLocalStorage(items.map(i => i.id === id ? updatedItem : i));
+        saveToLocalStorage(items.map(i => i.id === id ? updatedItem : i), user.id);
       } else {
         const updatedItems = items.map(i => i.id === id ? updatedItem : i);
         setItems(updatedItems);
-        saveToLocalStorage(updatedItems);
+        saveToLocalStorage(updatedItems, user.id);
       }
     } catch (err) {
       console.error('Error updating item:', err);
@@ -103,16 +109,18 @@ function App() {
   };
 
   const handleDeleteItem = async (id) => {
+    if (!user) return;
+    
     try {
       if (useBackend) {
         await deleteItem(id);
         const updatedItems = items.filter(i => i.id !== id);
         setItems(updatedItems);
-        saveToLocalStorage(updatedItems);
+        saveToLocalStorage(updatedItems, user.id);
       } else {
         const updatedItems = items.filter(i => i.id !== id);
         setItems(updatedItems);
-        saveToLocalStorage(updatedItems);
+        saveToLocalStorage(updatedItems, user.id);
       }
     } catch (err) {
       console.error('Error deleting item:', err);
@@ -121,6 +129,8 @@ function App() {
   };
 
   const handleEditItem = async (id, updatedData) => {
+    if (!user) return;
+    
     const item = items.find(i => i.id === id);
     if (!item) return;
 
@@ -130,11 +140,11 @@ function App() {
       if (useBackend) {
         const savedItem = await updateItem(id, updatedItem);
         setItems(items.map(i => i.id === id ? savedItem : i));
-        saveToLocalStorage(items.map(i => i.id === id ? savedItem : i));
+        saveToLocalStorage(items.map(i => i.id === id ? savedItem : i), user.id);
       } else {
         const updatedItems = items.map(i => i.id === id ? updatedItem : i);
         setItems(updatedItems);
-        saveToLocalStorage(updatedItems);
+        saveToLocalStorage(updatedItems, user.id);
       }
     } catch (err) {
       console.error('Error editing item:', err);
@@ -143,6 +153,8 @@ function App() {
   };
 
   const handleClearList = async () => {
+    if (!user) return;
+    
     if (!window.confirm('Czy na pewno chcesz usunąć wszystkie produkty?')) {
       return;
     }
@@ -151,10 +163,10 @@ function App() {
       if (useBackend) {
         await clearAllItems();
         setItems([]);
-        saveToLocalStorage([]);
+        saveToLocalStorage([], user.id);
       } else {
         setItems([]);
-        saveToLocalStorage([]);
+        saveToLocalStorage([], user.id);
       }
     } catch (err) {
       console.error('Error clearing list:', err);

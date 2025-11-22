@@ -1,7 +1,6 @@
 const express = require('express');
 const cors = require('cors');
 const bodyParser = require('body-parser');
-const sqlite3 = require('sqlite3').verbose();
 const path = require('path');
 const fs = require('fs');
 const bcrypt = require('bcrypt');
@@ -9,6 +8,7 @@ const jwt = require('jsonwebtoken');
 const swaggerUi = require('swagger-ui-express');
 const swaggerSpec = require('./swagger');
 const { generateSuggestions } = require('./ai/suggestions');
+const db = require('./db');
 
 const app = express();
 const PORT = process.env.PORT || 3001;
@@ -25,73 +25,31 @@ app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec, {
   customSiteTitle: 'Shopping List API Documentation'
 }));
 
-// Database setup
-const dbPath = path.join(__dirname, 'shopping_list.db');
-const db = new sqlite3.Database(dbPath);
-
 // Initialize database
-db.serialize(() => {
-  // Create users table
-  db.run(`CREATE TABLE IF NOT EXISTS users (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    username TEXT UNIQUE NOT NULL,
-    email TEXT UNIQUE NOT NULL,
-    password TEXT NOT NULL,
-    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
-  )`);
-
-  // Create items table
-  db.run(`CREATE TABLE IF NOT EXISTS items (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    user_id INTEGER NOT NULL,
-    name TEXT NOT NULL,
-    category TEXT,
-    quantity INTEGER DEFAULT 1,
-    price REAL,
-    bought INTEGER DEFAULT 0,
-    bought_date DATETIME,
-    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
-  )`);
-  
-  // Add user_id column if it doesn't exist (migration)
-  db.run(`ALTER TABLE items ADD COLUMN user_id INTEGER`, (err) => {
-    // Ignore error if column already exists
-  });
-
-  // Add bought_date column if it doesn't exist (migration)
-  db.run(`ALTER TABLE items ADD COLUMN bought_date DATETIME`, (err) => {
-    // Ignore error if column already exists
-  });
-
-  // Create test user if it doesn't exist
-  db.get('SELECT * FROM users WHERE username = ? OR email = ?', ['test', 'test@example.com'], async (err, row) => {
-    if (err) {
-      console.error('Error checking for test user:', err);
-      return;
-    }
-    if (!row) {
+(async () => {
+  try {
+    await db.initialize();
+    
+    // Create test user if it doesn't exist
+    const testUser = await db.get('SELECT * FROM users WHERE username = ? OR email = ?', ['test', 'test@example.com']);
+    if (!testUser) {
       try {
         const hashedPassword = await bcrypt.hash('test123', 10);
-        db.run(
+        const result = await db.run(
           'INSERT INTO users (username, email, password) VALUES (?, ?, ?)',
-          ['test', 'test@example.com', hashedPassword],
-          function(err) {
-            if (err) {
-              console.error('Error creating test user:', err);
-            } else {
-              console.log('✅ Test user created: test / test123');
-            }
-          }
+          ['test', 'test@example.com', hashedPassword]
         );
+        console.log('✅ Test user created: test / test123');
       } catch (error) {
-        console.error('Error hashing password for test user:', error);
+        console.error('Error creating test user:', error);
       }
     } else {
       console.log('✅ Test user already exists: test / test123');
     }
-  });
-});
+  } catch (error) {
+    console.error('Error initializing database:', error);
+  }
+})();
 
 // Authentication middleware
 const authenticateToken = (req, res, next) => {
@@ -159,43 +117,37 @@ app.post('/api/auth/register', async (req, res) => {
 
   try {
     // Check if user already exists
-    db.get('SELECT * FROM users WHERE username = ? OR email = ?', [username, email], async (err, row) => {
-      if (err) {
-        return res.status(500).json({ error: err.message });
-      }
-      if (row) {
-        return res.status(400).json({ error: 'Username or email already exists' });
-      }
+    const existingUser = await db.get('SELECT * FROM users WHERE username = ? OR email = ?', [username, email]);
+    if (existingUser) {
+      return res.status(400).json({ error: 'Username or email already exists' });
+    }
 
-      // Hash password
-      const hashedPassword = await bcrypt.hash(password, 10);
+    // Hash password
+    const hashedPassword = await bcrypt.hash(password, 10);
 
-      // Create user
-      db.run(
-        'INSERT INTO users (username, email, password) VALUES (?, ?, ?)',
-        [username, email, hashedPassword],
-        function(err) {
-          if (err) {
-            return res.status(500).json({ error: err.message });
-          }
+    // Create user
+    const result = await db.run(
+      'INSERT INTO users (username, email, password) VALUES (?, ?, ?)',
+      [username, email, hashedPassword]
+    );
 
-          // Generate JWT token
-          const token = jwt.sign(
-            { id: this.lastID, username, email },
-            JWT_SECRET,
-            { expiresIn: '7d' }
-          );
+    const userId = result.lastID || (result.rows && result.rows[0]?.id) || (await db.get('SELECT id FROM users WHERE username = ?', [username])).id;
 
-          res.status(201).json({
-            message: 'User registered successfully',
-            token,
-            user: { id: this.lastID, username, email }
-          });
-        }
-      );
+    // Generate JWT token
+    const token = jwt.sign(
+      { id: userId, username, email },
+      JWT_SECRET,
+      { expiresIn: '7d' }
+    );
+
+    res.status(201).json({
+      message: 'User registered successfully',
+      token,
+      user: { id: userId, username, email }
     });
   } catch (error) {
-    res.status(500).json({ error: 'Server error during registration' });
+    console.error('Registration error:', error);
+    res.status(500).json({ error: error.message || 'Server error during registration' });
   }
 });
 
@@ -238,48 +190,43 @@ app.post('/api/auth/register', async (req, res) => {
  *               $ref: '#/components/schemas/Error'
  */
 // POST login user
-app.post('/api/auth/login', (req, res) => {
+app.post('/api/auth/login', async (req, res) => {
   const { username, password } = req.body;
 
   if (!username || !password) {
     return res.status(400).json({ error: 'Username and password are required' });
   }
 
-  db.get('SELECT * FROM users WHERE username = ? OR email = ?', [username, username], async (err, user) => {
-    if (err) {
-      console.error('Database error during login:', err);
-      return res.status(500).json({ error: err.message });
-    }
+  try {
+    const user = await db.get('SELECT * FROM users WHERE username = ? OR email = ?', [username, username]);
     if (!user) {
       console.log(`Login attempt failed: user not found for username/email: ${username}`);
       return res.status(401).json({ error: 'Invalid username or password' });
     }
 
-    try {
-      const validPassword = await bcrypt.compare(password, user.password);
-      if (!validPassword) {
-        console.log(`Login attempt failed: invalid password for user: ${user.username}`);
-        return res.status(401).json({ error: 'Invalid username or password' });
-      }
-
-      // Generate JWT token
-      const token = jwt.sign(
-        { id: user.id, username: user.username, email: user.email },
-        JWT_SECRET,
-        { expiresIn: '7d' }
-      );
-
-      console.log(`Login successful for user: ${user.username}`);
-      res.json({
-        message: 'Login successful',
-        token,
-        user: { id: user.id, username: user.username, email: user.email }
-      });
-    } catch (error) {
-      console.error('Error during login:', error);
-      res.status(500).json({ error: 'Server error during login' });
+    const validPassword = await bcrypt.compare(password, user.password);
+    if (!validPassword) {
+      console.log(`Login attempt failed: invalid password for user: ${user.username}`);
+      return res.status(401).json({ error: 'Invalid username or password' });
     }
-  });
+
+    // Generate JWT token
+    const token = jwt.sign(
+      { id: user.id, username: user.username, email: user.email },
+      JWT_SECRET,
+      { expiresIn: '7d' }
+    );
+
+    console.log(`Login successful for user: ${user.username}`);
+    res.json({
+      message: 'Login successful',
+      token,
+      user: { id: user.id, username: user.username, email: user.email }
+    });
+  } catch (error) {
+    console.error('Error during login:', error);
+    res.status(500).json({ error: error.message || 'Server error during login' });
+  }
 });
 
 /**
@@ -355,15 +302,14 @@ app.get('/api/auth/verify', authenticateToken, (req, res) => {
  *               $ref: '#/components/schemas/Error'
  */
 // GET all items (protected)
-app.get('/api/items', authenticateToken, (req, res) => {
-  const userId = req.user.id;
-  db.all('SELECT * FROM items WHERE user_id = ? ORDER BY bought ASC, created_at DESC', [userId], (err, rows) => {
-    if (err) {
-      res.status(500).json({ error: err.message });
-      return;
-    }
+app.get('/api/items', authenticateToken, async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const rows = await db.all('SELECT * FROM items WHERE user_id = ? ORDER BY bought ASC, created_at DESC', [userId]);
     res.json(rows);
-  });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
 });
 
 /**
@@ -402,20 +348,18 @@ app.get('/api/items', authenticateToken, (req, res) => {
  *               $ref: '#/components/schemas/Error'
  */
 // GET single item (protected)
-app.get('/api/items/:id', authenticateToken, (req, res) => {
-  const id = req.params.id;
-  const userId = req.user.id;
-  db.get('SELECT * FROM items WHERE id = ? AND user_id = ?', [id, userId], (err, row) => {
-    if (err) {
-      res.status(500).json({ error: err.message });
-      return;
-    }
+app.get('/api/items/:id', authenticateToken, async (req, res) => {
+  try {
+    const id = req.params.id;
+    const userId = req.user.id;
+    const row = await db.get('SELECT * FROM items WHERE id = ? AND user_id = ?', [id, userId]);
     if (!row) {
-      res.status(404).json({ error: 'Item not found' });
-      return;
+      return res.status(404).json({ error: 'Item not found' });
     }
     res.json(row);
-  });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
 });
 
 /**
@@ -459,35 +403,29 @@ app.get('/api/items/:id', authenticateToken, (req, res) => {
  *               $ref: '#/components/schemas/Error'
  */
 // POST create new item (protected)
-app.post('/api/items', authenticateToken, (req, res) => {
-  const { name, category, quantity, price } = req.body;
-  const userId = req.user.id;
-  
-  if (!name || name.trim() === '') {
-    res.status(400).json({ error: 'Name is required' });
-    return;
-  }
-
-  // Ustaw domyślną kategorię "Inne" jeśli nie podano
-  const itemCategory = category && category.trim() ? category.trim() : 'Inne';
-
-  db.run(
-    'INSERT INTO items (user_id, name, category, quantity, price) VALUES (?, ?, ?, ?, ?)',
-    [userId, name.trim(), itemCategory, quantity || 1, price || null],
-    function(err) {
-      if (err) {
-        res.status(500).json({ error: err.message });
-        return;
-      }
-      db.get('SELECT * FROM items WHERE id = ?', [this.lastID], (err, row) => {
-        if (err) {
-          res.status(500).json({ error: err.message });
-          return;
-        }
-        res.status(201).json(row);
-      });
+app.post('/api/items', authenticateToken, async (req, res) => {
+  try {
+    const { name, category, quantity, price } = req.body;
+    const userId = req.user.id;
+    
+    if (!name || name.trim() === '') {
+      return res.status(400).json({ error: 'Name is required' });
     }
-  );
+
+    // Ustaw domyślną kategorię "Inne" jeśli nie podano
+    const itemCategory = category && category.trim() ? category.trim() : 'Inne';
+
+    const result = await db.run(
+      'INSERT INTO items (user_id, name, category, quantity, price) VALUES (?, ?, ?, ?, ?)',
+      [userId, name.trim(), itemCategory, quantity || 1, price || null]
+    );
+
+    const itemId = result.lastID || (result.rows && result.rows[0]?.id) || (await db.get('SELECT id FROM items WHERE user_id = ? AND name = ? ORDER BY id DESC LIMIT 1', [userId, name.trim()])).id;
+    const row = await db.get('SELECT * FROM items WHERE id = ?', [itemId]);
+    res.status(201).json(row);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
 });
 
 /**
@@ -532,35 +470,29 @@ app.post('/api/items', authenticateToken, (req, res) => {
  *               $ref: '#/components/schemas/Error'
  */
 // PUT update item (protected)
-app.put('/api/items/:id', authenticateToken, (req, res) => {
-  const id = req.params.id;
-  const userId = req.user.id;
-  const { name, category, quantity, price, bought } = req.body;
+app.put('/api/items/:id', authenticateToken, async (req, res) => {
+  try {
+    const id = req.params.id;
+    const userId = req.user.id;
+    const { name, category, quantity, price, bought } = req.body;
 
-  // Set bought_date when marking as bought
-  const boughtDate = bought === 1 ? new Date().toISOString() : null;
+    // Set bought_date when marking as bought
+    const boughtDate = bought === 1 ? new Date().toISOString() : null;
 
-  db.run(
-    'UPDATE items SET name = ?, category = ?, quantity = ?, price = ?, bought = ?, bought_date = ? WHERE id = ? AND user_id = ?',
-    [name, category, quantity, price, bought !== undefined ? bought : 0, boughtDate, id, userId],
-    function(err) {
-      if (err) {
-        res.status(500).json({ error: err.message });
-        return;
-      }
-      if (this.changes === 0) {
-        res.status(404).json({ error: 'Item not found' });
-        return;
-      }
-      db.get('SELECT * FROM items WHERE id = ? AND user_id = ?', [id, userId], (err, row) => {
-        if (err) {
-          res.status(500).json({ error: err.message });
-          return;
-        }
-        res.json(row);
-      });
+    const result = await db.run(
+      'UPDATE items SET name = ?, category = ?, quantity = ?, price = ?, bought = ?, bought_date = ? WHERE id = ? AND user_id = ?',
+      [name, category, quantity, price, bought !== undefined ? bought : 0, boughtDate, id, userId]
+    );
+
+    if (result.changes === 0) {
+      return res.status(404).json({ error: 'Item not found' });
     }
-  );
+
+    const row = await db.get('SELECT * FROM items WHERE id = ? AND user_id = ?', [id, userId]);
+    res.json(row);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
 });
 
 /**
@@ -599,20 +531,18 @@ app.put('/api/items/:id', authenticateToken, (req, res) => {
  *               $ref: '#/components/schemas/Error'
  */
 // DELETE item (protected)
-app.delete('/api/items/:id', authenticateToken, (req, res) => {
-  const id = req.params.id;
-  const userId = req.user.id;
-  db.run('DELETE FROM items WHERE id = ? AND user_id = ?', [id, userId], function(err) {
-    if (err) {
-      res.status(500).json({ error: err.message });
-      return;
-    }
-    if (this.changes === 0) {
-      res.status(404).json({ error: 'Item not found' });
-      return;
+app.delete('/api/items/:id', authenticateToken, async (req, res) => {
+  try {
+    const id = req.params.id;
+    const userId = req.user.id;
+    const result = await db.run('DELETE FROM items WHERE id = ? AND user_id = ?', [id, userId]);
+    if (result.changes === 0) {
+      return res.status(404).json({ error: 'Item not found' });
     }
     res.json({ message: 'Item deleted successfully' });
-  });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
 });
 
 /**
@@ -644,15 +574,14 @@ app.delete('/api/items/:id', authenticateToken, (req, res) => {
  *               $ref: '#/components/schemas/Error'
  */
 // DELETE all items (protected)
-app.delete('/api/items', authenticateToken, (req, res) => {
-  const userId = req.user.id;
-  db.run('DELETE FROM items WHERE user_id = ?', [userId], function(err) {
-    if (err) {
-      res.status(500).json({ error: err.message });
-      return;
-    }
-    res.json({ message: 'All items deleted successfully', count: this.changes });
-  });
+app.delete('/api/items', authenticateToken, async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const result = await db.run('DELETE FROM items WHERE user_id = ?', [userId]);
+    res.json({ message: 'All items deleted successfully', count: result.changes });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
 });
 
 /**
@@ -690,36 +619,33 @@ app.delete('/api/items', authenticateToken, (req, res) => {
  *               $ref: '#/components/schemas/Error'
  */
 // AI Suggestions endpoint (protected)
-app.post('/api/ai/suggestions', authenticateToken, (req, res) => {
-  const { currentItems = [] } = req.body;
-  const userId = req.user.id;
-  
-  // Pobierz historię zakupów (produkty oznaczone jako kupione)
-  // Uwzględnij ostatnie 60 dni historii
-  const daysAgo = new Date();
-  daysAgo.setDate(daysAgo.getDate() - 60);
-  
-  db.all(
-    `SELECT * FROM items 
-     WHERE user_id = ? AND bought = 1 AND bought_date IS NOT NULL 
-     AND bought_date >= datetime('now', '-60 days')
-     ORDER BY bought_date DESC`,
-    [userId],
-    (err, history) => {
-      if (err) {
-        res.status(500).json({ error: err.message });
-        return;
-      }
-      
-      try {
-        const suggestions = generateSuggestions(history, currentItems);
-        res.json(suggestions);
-      } catch (error) {
-        console.error('Error generating suggestions:', error);
-        res.status(500).json({ error: 'Failed to generate suggestions' });
-      }
-    }
-  );
+app.post('/api/ai/suggestions', authenticateToken, async (req, res) => {
+  try {
+    const { currentItems = [] } = req.body;
+    const userId = req.user.id;
+    
+    // Pobierz historię zakupów (produkty oznaczone jako kupione)
+    // Uwzględnij ostatnie 60 dni historii
+    // Use database-agnostic date function
+    const usePostgres = !!process.env.DATABASE_URL;
+    const dateQuery = usePostgres 
+      ? `bought_date >= NOW() - INTERVAL '60 days'`
+      : `bought_date >= datetime('now', '-60 days')`;
+    
+    const history = await db.all(
+      `SELECT * FROM items 
+       WHERE user_id = ? AND bought = 1 AND bought_date IS NOT NULL 
+       AND ${dateQuery}
+       ORDER BY bought_date DESC`,
+      [userId]
+    );
+    
+    const suggestions = generateSuggestions(history, currentItems);
+    res.json(suggestions);
+  } catch (error) {
+    console.error('Error generating suggestions:', error);
+    res.status(500).json({ error: error.message || 'Failed to generate suggestions' });
+  }
 });
 
 /**
@@ -776,14 +702,15 @@ if (process.env.NODE_ENV !== 'test') {
   });
 
   // Graceful shutdown
-  process.on('SIGINT', () => {
-    db.close((err) => {
-      if (err) {
-        console.error(err.message);
-      }
+  process.on('SIGINT', async () => {
+    try {
+      await db.close();
       console.log('Database connection closed.');
       process.exit(0);
-    });
+    } catch (err) {
+      console.error(err.message);
+      process.exit(1);
+    }
   });
 }
 

@@ -1,5 +1,6 @@
 import React, { createContext, useState, useContext, useEffect } from 'react';
 import { loginUser, registerUser, verifyToken } from '../services/api';
+import { clearAllLocalStorage } from '../services/localStorage';
 
 const AuthContext = createContext(null);
 
@@ -60,6 +61,8 @@ export const AuthProvider = ({ children }) => {
 
   const logout = () => {
     localStorage.removeItem('token');
+    // Clear all user-specific localStorage data
+    clearAllLocalStorage();
     setToken(null);
     setUser(null);
   };
