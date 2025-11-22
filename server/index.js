@@ -6,6 +6,8 @@ const path = require('path');
 const fs = require('fs');
 const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
+const swaggerUi = require('swagger-ui-express');
+const swaggerSpec = require('./swagger');
 const { generateSuggestions } = require('./ai/suggestions');
 
 const app = express();
@@ -16,6 +18,12 @@ const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key-change-in-producti
 app.use(cors());
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: true }));
+
+// Swagger UI
+app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec, {
+  customCss: '.swagger-ui .topbar { display: none }',
+  customSiteTitle: 'Shopping List API Documentation'
+}));
 
 // Database setup
 const dbPath = path.join(__dirname, 'shopping_list.db');
@@ -77,6 +85,38 @@ const authenticateToken = (req, res, next) => {
 
 // Routes
 
+/**
+ * @swagger
+ * /api/auth/register:
+ *   post:
+ *     summary: Rejestracja nowego użytkownika
+ *     tags: [Authentication]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             $ref: '#/components/schemas/RegisterRequest'
+ *     responses:
+ *       201:
+ *         description: Użytkownik został zarejestrowany
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/AuthResponse'
+ *       400:
+ *         description: Błąd walidacji
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ *       500:
+ *         description: Błąd serwera
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ */
 // POST register new user
 app.post('/api/auth/register', async (req, res) => {
   const { username, email, password } = req.body;
@@ -131,6 +171,44 @@ app.post('/api/auth/register', async (req, res) => {
   }
 });
 
+/**
+ * @swagger
+ * /api/auth/login:
+ *   post:
+ *     summary: Logowanie użytkownika
+ *     tags: [Authentication]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             $ref: '#/components/schemas/LoginRequest'
+ *     responses:
+ *       200:
+ *         description: Logowanie udane
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/AuthResponse'
+ *       400:
+ *         description: Brakuje wymaganych pól
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ *       401:
+ *         description: Niepoprawne dane logowania
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ *       500:
+ *         description: Błąd serwera
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ */
 // POST login user
 app.post('/api/auth/login', (req, res) => {
   const { username, password } = req.body;
@@ -171,6 +249,40 @@ app.post('/api/auth/login', (req, res) => {
   });
 });
 
+/**
+ * @swagger
+ * /api/auth/verify:
+ *   get:
+ *     summary: Weryfikacja tokenu JWT
+ *     tags: [Authentication]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Token jest poprawny
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 valid:
+ *                   type: boolean
+ *                   example: true
+ *                 user:
+ *                   $ref: '#/components/schemas/User'
+ *       401:
+ *         description: Brak tokena
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ *       403:
+ *         description: Niepoprawny lub wygasły token
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ */
 // GET verify token
 app.get('/api/auth/verify', authenticateToken, (req, res) => {
   res.json({
@@ -179,6 +291,36 @@ app.get('/api/auth/verify', authenticateToken, (req, res) => {
   });
 });
 
+/**
+ * @swagger
+ * /api/items:
+ *   get:
+ *     summary: Pobierz wszystkie produkty użytkownika
+ *     tags: [Items]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Lista produktów
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: array
+ *               items:
+ *                 $ref: '#/components/schemas/Item'
+ *       401:
+ *         description: Brak autoryzacji
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ *       500:
+ *         description: Błąd serwera
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ */
 // GET all items (protected)
 app.get('/api/items', authenticateToken, (req, res) => {
   const userId = req.user.id;
@@ -191,6 +333,41 @@ app.get('/api/items', authenticateToken, (req, res) => {
   });
 });
 
+/**
+ * @swagger
+ * /api/items/{id}:
+ *   get:
+ *     summary: Pobierz pojedynczy produkt
+ *     tags: [Items]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: integer
+ *         description: ID produktu
+ *     responses:
+ *       200:
+ *         description: Szczegóły produktu
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Item'
+ *       404:
+ *         description: Produkt nie został znaleziony
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ *       401:
+ *         description: Brak autoryzacji
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ */
 // GET single item (protected)
 app.get('/api/items/:id', authenticateToken, (req, res) => {
   const id = req.params.id;
@@ -208,6 +385,46 @@ app.get('/api/items/:id', authenticateToken, (req, res) => {
   });
 });
 
+/**
+ * @swagger
+ * /api/items:
+ *   post:
+ *     summary: Dodaj nowy produkt
+ *     tags: [Items]
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             $ref: '#/components/schemas/ItemRequest'
+ *     responses:
+ *       201:
+ *         description: Produkt został utworzony
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Item'
+ *       400:
+ *         description: Błąd walidacji (brakuje nazwy)
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ *       401:
+ *         description: Brak autoryzacji
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ *       500:
+ *         description: Błąd serwera
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ */
 // POST create new item (protected)
 app.post('/api/items', authenticateToken, (req, res) => {
   const { name, category, quantity, price } = req.body;
@@ -240,6 +457,47 @@ app.post('/api/items', authenticateToken, (req, res) => {
   );
 });
 
+/**
+ * @swagger
+ * /api/items/{id}:
+ *   put:
+ *     summary: Zaktualizuj produkt
+ *     tags: [Items]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: integer
+ *         description: ID produktu
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             $ref: '#/components/schemas/ItemUpdateRequest'
+ *     responses:
+ *       200:
+ *         description: Produkt został zaktualizowany
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Item'
+ *       404:
+ *         description: Produkt nie został znaleziony
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ *       401:
+ *         description: Brak autoryzacji
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ */
 // PUT update item (protected)
 app.put('/api/items/:id', authenticateToken, (req, res) => {
   const id = req.params.id;
@@ -272,6 +530,41 @@ app.put('/api/items/:id', authenticateToken, (req, res) => {
   );
 });
 
+/**
+ * @swagger
+ * /api/items/{id}:
+ *   delete:
+ *     summary: Usuń produkt
+ *     tags: [Items]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: integer
+ *         description: ID produktu
+ *     responses:
+ *       200:
+ *         description: Produkt został usunięty
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/SuccessMessage'
+ *       404:
+ *         description: Produkt nie został znaleziony
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ *       401:
+ *         description: Brak autoryzacji
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ */
 // DELETE item (protected)
 app.delete('/api/items/:id', authenticateToken, (req, res) => {
   const id = req.params.id;
@@ -289,6 +582,34 @@ app.delete('/api/items/:id', authenticateToken, (req, res) => {
   });
 });
 
+/**
+ * @swagger
+ * /api/items:
+ *   delete:
+ *     summary: Usuń wszystkie produkty użytkownika
+ *     tags: [Items]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Wszystkie produkty zostały usunięte
+ *         content:
+ *           application/json:
+ *             schema:
+ *               allOf:
+ *                 - $ref: '#/components/schemas/SuccessMessage'
+ *                 - type: object
+ *                   properties:
+ *                     count:
+ *                       type: integer
+ *                       description: Liczba usuniętych produktów
+ *       401:
+ *         description: Brak autoryzacji
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ */
 // DELETE all items (protected)
 app.delete('/api/items', authenticateToken, (req, res) => {
   const userId = req.user.id;
@@ -301,6 +622,40 @@ app.delete('/api/items', authenticateToken, (req, res) => {
   });
 });
 
+/**
+ * @swagger
+ * /api/ai/suggestions:
+ *   post:
+ *     summary: Pobierz sugestie AI produktów na podstawie historii zakupów
+ *     tags: [AI Suggestions]
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: false
+ *       content:
+ *         application/json:
+ *           schema:
+ *             $ref: '#/components/schemas/AISuggestionsRequest'
+ *     responses:
+ *       200:
+ *         description: Lista sugestii produktów
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/AISuggestionsResponse'
+ *       401:
+ *         description: Brak autoryzacji
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ *       500:
+ *         description: Błąd podczas generowania sugestii
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ */
 // AI Suggestions endpoint (protected)
 app.post('/api/ai/suggestions', authenticateToken, (req, res) => {
   const { currentItems = [] } = req.body;
@@ -334,24 +689,43 @@ app.post('/api/ai/suggestions', authenticateToken, (req, res) => {
   );
 });
 
+/**
+ * @swagger
+ * /api/health:
+ *   get:
+ *     summary: Sprawdzenie statusu serwera
+ *     tags: [Health]
+ *     responses:
+ *       200:
+ *         description: Serwer działa poprawnie
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/HealthResponse'
+ */
 // Health check
 app.get('/api/health', (req, res) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString() });
 });
 
-// Start server
-app.listen(PORT, () => {
-  console.log(`Server running on http://localhost:${PORT}`);
-});
+// Export app for testing
+module.exports = app;
 
-// Graceful shutdown
-process.on('SIGINT', () => {
-  db.close((err) => {
-    if (err) {
-      console.error(err.message);
-    }
-    console.log('Database connection closed.');
-    process.exit(0);
+// Start server only if not in test mode
+if (process.env.NODE_ENV !== 'test') {
+  app.listen(PORT, () => {
+    console.log(`Server running on http://localhost:${PORT}`);
   });
-});
+
+  // Graceful shutdown
+  process.on('SIGINT', () => {
+    db.close((err) => {
+      if (err) {
+        console.error(err.message);
+      }
+      console.log('Database connection closed.');
+      process.exit(0);
+    });
+  });
+}
 

@@ -15,7 +15,9 @@ Testy E2E weryfikujące działanie aplikacji z perspektywy użytkownika:
 3. **Test oznaczania jako kupiony** - Weryfikuje, że użytkownik może oznaczyć produkt jako kupiony
 4. **Test usuwania produktu** - Weryfikuje, że użytkownik może usunąć produkt z listy
 
-### Testy Backendu (`server/ai/suggestions.test.js`)
+### Testy Backendu
+
+#### Testy jednostkowe (`server/ai/suggestions.test.js`)
 
 Testy jednostkowe dla modułu AI:
 
@@ -23,6 +25,22 @@ Testy jednostkowe dla modułu AI:
 2. **Test produktów komplementarnych** - Weryfikuje znajdowanie produktów często kupowanych razem
 3. **Test sugestii kategorii** - Weryfikuje sugerowanie produktów z tej samej kategorii
 4. **Test generowania sugestii** - Weryfikuje główną funkcję generowania sugestii AI
+
+#### Testy integracyjne (`server/integration.test.js`)
+
+Testy integracyjne dla wszystkich endpointów API:
+
+1. **Health Check** - Weryfikuje endpoint sprawdzania statusu serwera
+2. **Autoryzacja** - Testy rejestracji, logowania i weryfikacji tokenów
+3. **Produkty (CRUD)** - Testy wszystkich operacji na produktach:
+   - Pobieranie listy produktów
+   - Pobieranie pojedynczego produktu
+   - Dodawanie nowych produktów
+   - Aktualizacja produktów
+   - Usuwanie produktów (pojedynczych i wszystkich)
+4. **Sugestie AI** - Testy endpointu generowania sugestii produktów
+
+Testy integracyjne używają biblioteki `supertest` do testowania całego przepływu HTTP.
 
 ## Uruchomienie testów
 
@@ -51,10 +69,14 @@ npm test
 ## Pokrycie testami
 
 Testy weryfikują:
-- ✅ Logowanie i autoryzację użytkownika
+- ✅ Health check endpoint
+- ✅ Logowanie i autoryzację użytkownika (rejestracja, logowanie, weryfikacja tokenów)
 - ✅ Operacje CRUD na produktach (Create, Read, Update, Delete)
 - ✅ Logikę biznesową AI (sugestie produktów)
+- ✅ Endpointy AI sugestii
 - ✅ Interakcje użytkownika z interfejsem
+- ✅ Obsługę błędów i walidację danych
+- ✅ Izolację danych między użytkownikami
 
 ## CI/CD
 
