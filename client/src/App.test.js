@@ -12,7 +12,8 @@ beforeAll(() => {
     if (
       typeof args[0] === 'string' &&
       (args[0].includes('Warning: ReactDOM.render') ||
-       args[0].includes('Not implemented: HTMLFormElement.prototype.submit'))
+       args[0].includes('Not implemented: HTMLFormElement.prototype.submit') ||
+       args[0].includes('ReactDOMTestUtils.act is deprecated'))
     ) {
       return;
     }
@@ -31,27 +32,28 @@ jest.mock('./services/api');
 const localStorageMock = (() => {
   let store = {};
   return {
-    getItem: jest.fn((key) => store[key] || null),
-    setItem: jest.fn((key, value) => {
+    getItem: (key) => store[key] || null,
+    setItem: (key, value) => {
       store[key] = value.toString();
-    }),
-    removeItem: jest.fn((key) => {
+    },
+    removeItem: (key) => {
       delete store[key];
-    }),
-    clear: jest.fn(() => {
+    },
+    clear: () => {
       store = {};
-    }),
+    },
   };
 })();
 
 Object.defineProperty(window, 'localStorage', {
   value: localStorageMock,
+  writable: true,
 });
 
 describe('Shopping List App - User Perspective Tests', () => {
   beforeEach(() => {
     localStorage.clear();
-    jest.clearAllMocks();
+    jest.resetAllMocks();
     
     // Mock successful login
     api.loginUser.mockResolvedValue({
@@ -59,6 +61,7 @@ describe('Shopping List App - User Perspective Tests', () => {
       user: { id: 1, username: 'testuser', email: 'test@example.com' }
     });
     
+    // Mock verifyToken - this is critical for authentication
     api.verifyToken.mockResolvedValue({
       valid: true,
       user: { id: 1, username: 'testuser', email: 'test@example.com' }
@@ -77,13 +80,19 @@ describe('Shopping List App - User Perspective Tests', () => {
     );
 
     // Sprawdź czy ekran logowania jest widoczny
-    expect(screen.getByText('Zaloguj się')).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Zaloguj się' })).toBeInTheDocument();
     expect(screen.getByLabelText(/Nazwa użytkownika lub email/i)).toBeInTheDocument();
     expect(screen.getByLabelText(/Hasło/i)).toBeInTheDocument();
   });
 
   test('Użytkownik może dodać produkt do listy i zobaczyć go na liście', async () => {
-    // Mock successful login
+    // Ensure verifyToken mock is set up first
+    api.verifyToken.mockResolvedValue({
+      valid: true,
+      user: { id: 1, username: 'testuser', email: 'test@example.com' }
+    });
+    
+    // Mock successful login - set token before rendering
     localStorage.setItem('token', 'mock-token');
     
     // Mock items after adding
@@ -111,10 +120,10 @@ describe('Shopping List App - User Perspective Tests', () => {
       </AuthProvider>
     );
 
-    // Wait for app to load
+    // Wait for authentication to complete - look for authenticated content
     await waitFor(() => {
-      expect(screen.queryByText('Zaloguj się')).not.toBeInTheDocument();
-    });
+      expect(screen.getByText(/Lista Zakupów/i)).toBeInTheDocument();
+    }, { timeout: 3000 });
 
     // Find and fill the form
     const nameInput = screen.getByLabelText(/Nazwa produktu/i);
@@ -142,6 +151,12 @@ describe('Shopping List App - User Perspective Tests', () => {
   });
 
   test('Użytkownik może oznaczyć produkt jako kupiony', async () => {
+    // Ensure verifyToken mock is set up first
+    api.verifyToken.mockResolvedValue({
+      valid: true,
+      user: { id: 1, username: 'testuser', email: 'test@example.com' }
+    });
+    
     localStorage.setItem('token', 'mock-token');
     
     const mockItems = [
@@ -165,6 +180,11 @@ describe('Shopping List App - User Perspective Tests', () => {
       </AuthProvider>
     );
 
+    // Wait for authentication to complete - look for authenticated content
+    await waitFor(() => {
+      expect(screen.getByText(/Lista Zakupów/i)).toBeInTheDocument();
+    }, { timeout: 3000 });
+
     // Wait for item to load
     await waitFor(() => {
       expect(screen.getByText('Chleb')).toBeInTheDocument();
@@ -183,6 +203,12 @@ describe('Shopping List App - User Perspective Tests', () => {
   });
 
   test('Użytkownik może usunąć produkt z listy', async () => {
+    // Ensure verifyToken mock is set up first
+    api.verifyToken.mockResolvedValue({
+      valid: true,
+      user: { id: 1, username: 'testuser', email: 'test@example.com' }
+    });
+    
     localStorage.setItem('token', 'mock-token');
     
     const mockItems = [
@@ -211,6 +237,11 @@ describe('Shopping List App - User Perspective Tests', () => {
         <App />
       </AuthProvider>
     );
+
+    // Wait for authentication to complete - look for authenticated content
+    await waitFor(() => {
+      expect(screen.getByText(/Lista Zakupów/i)).toBeInTheDocument();
+    }, { timeout: 3000 });
 
     // Wait for item to load
     await waitFor(() => {
